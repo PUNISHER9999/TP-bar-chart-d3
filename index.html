@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Visualize Data with a Bar Chart</title>
+  <style>
+    body { font-family: system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; margin: 24px; background: #f6f7f9; color: #222; }
+    h1 { margin-bottom: 4px; }
+    #subtitle { margin: 0 0 16px; color: #555; }
+    .bar { fill: #3b82c4; }
+    .bar:hover { fill: #e8833a; }
+    .axis text { font-size: 12px; }
+    .axis-label { font-size: 13px; fill: #333; }
+    #tooltip {
+      position: absolute; pointer-events: none; opacity: 0;
+      background: rgba(20, 20, 20, .88); color: #fff;
+      padding: 8px 10px; border-radius: 6px; font-size: 13px; line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <h1 id="title">United States GDP</h1>
+  <p id="subtitle">Produit intérieur brut trimestriel, en milliards de dollars</p>
+  <svg id="chart"></svg>
+  <div id="tooltip"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+  <script>
+    const URL = "https://cdn.freecodecamp.org/testable-projects-fcc/data/tests/GDP-data.json";
+    const W = 960, H = 480;
+    const margin = { top: 20, right: 30, bottom: 50, left: 70 };
+    const innerW = W - margin.left - margin.right;
+    const innerH = H - margin.top - margin.bottom;
+
+    const svg = d3.select("#chart").attr("width", W).attr("height", H);
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+    const tooltip = d3.select("#tooltip");
+
+    d3.json(URL).then(json => {
+      const data = json.data.map(([date, gdp]) => ({ date, gdp, time: new Date(date) }));
+
+      const x = d3.scaleTime()
+        .domain([d3.min(data, d => d.time), d3.max(data, d => d.time)])
+        .range([0, innerW]);
+      const y = d3.scaleLinear()
+        .domain([0, d3.max(data, d => d.gdp)])
+        .range([innerH, 0]);
+
+      g.append("g").attr("id", "x-axis").attr("class", "axis")
+        .attr("transform", `translate(0,${innerH})`)
+        .call(d3.axisBottom(x).ticks(d3.timeYear.every(5)));
+
+      g.append("g").attr("id", "y-axis").attr("class", "axis")
+        .call(d3.axisLeft(y).ticks(10).tickFormat(d => d.toLocaleString("fr-FR")));
+
+      svg.append("text").attr("class", "axis-label")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -(margin.top + innerH / 2)).attr("y", 16)
+        .attr("text-anchor", "middle").text("GDP (milliards de $)");
+
+      svg.append("text").attr("class", "axis-label")
+        .attr("x", margin.left + innerW / 2).attr("y", H - 8)
+        .attr("text-anchor", "middle").text("Année");
+
+      const barW = innerW / data.length;
+
+      g.selectAll(".bar").data(data).enter().append("rect")
+        .attr("class", "bar")
+        .attr("data-date", d => d.date)
+        .attr("data-gdp", d => d.gdp)
+        .attr("x", d => x(d.time))
+        .attr("y", d => y(d.gdp))
+        .attr("width", barW)
+        .attr("height", d => innerH - y(d.gdp))
+        .on("mouseover", (event, d) => {
+          const q = "T" + (Math.floor(d.time.getMonth() / 3) + 1);
+          tooltip.attr("data-date", d.date)
+            .style("opacity", 1)
+            .html(`${d.time.getFullYear()} ${q}<br><strong>${d.gdp.toLocaleString("fr-FR")} Md$</strong>`);
+        })
+        .on("mousemove", event => {
+          tooltip.style("left", event.pageX + 14 + "px").style("top", event.pageY - 40 + "px");
+        })
+        .on("mouseout", () => tooltip.style("opacity", 0));
+    });
+  </script>
+</body>
+</html>
