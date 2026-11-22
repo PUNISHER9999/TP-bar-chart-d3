@@ -27,7 +27,18 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
   <script>
-    const URL = "https://cdn.freecodecamp.org/testable-projects-fcc/data/tests/GDP-data.json";
+    const DATA_URLS = [
+      "https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/GDP-data.json",
+      "GDP-data.json"
+    ];
+
+    function loadData(i = 0) {
+      return d3.json(DATA_URLS[i]).catch(err => {
+        if (i + 1 < DATA_URLS.length) return loadData(i + 1);
+        throw err;
+      });
+    }
+
     const W = 960, H = 480;
     const margin = { top: 20, right: 30, bottom: 50, left: 70 };
     const innerW = W - margin.left - margin.right;
@@ -37,7 +48,7 @@
     const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
     const tooltip = d3.select("#tooltip");
 
-    d3.json(URL).then(json => {
+    loadData().then(json => {
       const data = json.data.map(([date, gdp]) => ({ date, gdp, time: new Date(date) }));
 
       const x = d3.scaleTime()
@@ -52,7 +63,7 @@
         .call(d3.axisBottom(x).ticks(d3.timeYear.every(5)));
 
       g.append("g").attr("id", "y-axis").attr("class", "axis")
-        .call(d3.axisLeft(y).ticks(10).tickFormat(d => d.toLocaleString("fr-FR")));
+        .call(d3.axisLeft(y).ticks(10).tickFormat(d3.format("d")));
 
       svg.append("text").attr("class", "axis-label")
         .attr("transform", "rotate(-90)")
@@ -83,7 +94,12 @@
           tooltip.style("left", event.pageX + 14 + "px").style("top", event.pageY - 40 + "px");
         })
         .on("mouseout", () => tooltip.style("opacity", 0));
+    }).catch(err => {
+      document.body.insertAdjacentHTML("beforeend",
+        "<p style='color:red'>Erreur de chargement des données : " + err.message + "</p>");
     });
   </script>
+
+  <script src="https://cdn.freecodecamp.org/testable-projects-fcc/v1/bundle.js"></script>
 </body>
 </html>
